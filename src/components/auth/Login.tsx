@@ -1,8 +1,6 @@
-import React, { Fragment, useReducer } from 'react'
+import React, { Fragment, useContext, useReducer } from 'react'
 
-import * as GLOBAL_ACITON_CREATORS from './state/actions/AuthActionCreators'
-import { AuthReducer } from './state/AuthReducer';
-import { initAuthState } from './state/AuthState';
+import * as AUTH_ACITON_CREATORS from './state/actions/AuthActionCreators'
 import { loginAPICall } from './state/actions/AuthAPICalls';
 
 import * as LOCAL_ACTION_CREATORS from './login/state/LoginActionCreators';
@@ -13,11 +11,15 @@ import { LoginForm } from './login/LoginForm'
 import { Error } from './login/Error';
 import { Loading } from './login/Loading';
 import { Logout } from './login/Logout';
+import { Provider, useSelector } from 'react-redux';
+import { Store } from '../../redux/Store';
+import { AuthDispatchContext, AuthStateContext, useAuthContext } from './state/AuthContext';
 
 export const Login = () => {
-    const [globalState, globalDispatch] = useReducer(AuthReducer, initAuthState)
+    const [authState, authDispatch] = useAuthContext()
+
     const [localState, localDispatch] = useReducer(LoginReducer, initLoginState)
-    const { isLoggedIn, error } = globalState;
+    const { isLoggedIn, error } = authState;
     const { email, password, isLoading } = localState
 
     const handleEmailTextChange = (email: string) => {
@@ -31,7 +33,7 @@ export const Login = () => {
     }
 
     const handleLogout = () => {
-        globalDispatch(GLOBAL_ACITON_CREATORS.logout())
+        authDispatch(AUTH_ACITON_CREATORS.logout())
         const isLoading = false
         handleLoginLoading(isLoading)
     }
@@ -42,10 +44,10 @@ export const Login = () => {
         try {
             await loginAPICall(email, password);
             const isSuccesful = true
-            globalDispatch(GLOBAL_ACITON_CREATORS.login(isSuccesful))
+            authDispatch(AUTH_ACITON_CREATORS.login(isSuccesful))
         } catch (error) {
             const isSuccesful = false
-            globalDispatch(GLOBAL_ACITON_CREATORS.login(isSuccesful))
+            authDispatch(AUTH_ACITON_CREATORS.login(isSuccesful))
         } finally {
             const isLoading = false
             handleLoginLoading(isLoading)
@@ -64,14 +66,15 @@ export const Login = () => {
     const errorProps = { error: error }
 
     return (
+        <Provider store={Store}>
+            <Fragment>
+                <div>{'From Login component auth state --->' + isLoggedIn + ' loading state --->' + isLoading}</div>
+                {error && !isLoading && <Error {...errorProps} />}
+                {isLoggedIn && <Logout {...logoutProps} />}
+                {!isLoggedIn && !isLoading && <LoginForm {...loginFormProps} />}
+                {isLoading && <Loading />}
 
-        <Fragment>
-            {error && !isLoading && <Error {...errorProps} />}
-            {isLoggedIn && <Logout {...logoutProps} />}
-            {!isLoggedIn && !isLoading && <LoginForm {...loginFormProps} />}
-            {isLoading && <Loading />}
-
-        </Fragment>
-
+            </Fragment>
+        </Provider>
     )
 }
